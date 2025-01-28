@@ -71,6 +71,7 @@ enum cwl_op
     JumpGt,
     JumpLe,
     Halt,
+    CWL_OP_MAX
 };
 
 typedef struct cwl_vm_inst
@@ -110,9 +111,9 @@ typedef struct cwl_state
     {
         enum section
         {
+            line, // up down effects line var
             opp, // up down effects opp
             arg, // up down effects arg (if op has one)
-            line // up down effects line var
         } part;
         uint8_t line; // what code[line] is being edited right now
     } ed;

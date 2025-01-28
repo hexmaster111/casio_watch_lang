@@ -184,12 +184,10 @@ void SimDraw()
 void Sim_API_lcd_clear()
 {
     LOGCALL();
-    lcd_state.d[0] = 0;
-    lcd_state.d[1] = 0;
-    lcd_state.d[2] = 0;
-    lcd_state.d[3] = 0;
-    lcd_state.d[4] = 0;
-    lcd_state.d[5] = 0;
+    for (int i = 0; i < sizeof(lcd_state.d) / sizeof(lcd_state.d[0]); i++)
+    {
+        lcd_state.d[i] = 0;
+    }
 }
 
 int GetNumberAtPlace(int value, int dig, int rdx)
@@ -252,10 +250,11 @@ int main(int argc, char *argv[])
 
     cwl_set_out(out);
     cwl_init();
+    cwl.run_state = edit;
 
     cwl_debug_loadprog(
         (cwl_vm_inst[128]){
-            {Push, 5}, // 5
+            {Push, 1}, // 5
             {Push, 5}, // 5 5
             {Add},     // 10
             {Display}, // 10
@@ -266,8 +265,8 @@ int main(int argc, char *argv[])
     InitWindow(126 * 2, 80 * 2, "F-91W sim");
     SetTargetFPS(60);
 
-    char n = 'a';
-    float next = 0.5f;
+    // char n = 'a';
+    // float next = 0.5f;
 
     while (!WindowShouldClose())
     {
@@ -275,24 +274,25 @@ int main(int argc, char *argv[])
 
         cwl_main(ECALL_Tick);
 
-        if (GetTime() > next)
-        {
-            next = GetTime() + 0.5f;
+        // if (GetTime() > next)
+        // {
+        //     next = GetTime() + 0.5f;
 
-            Sim_API_lcd_output_char(0, n);
-            Sim_API_lcd_output_int_hex(6, 2, n);
+        //     Sim_API_lcd_output_char(0, n);
+        //     Sim_API_lcd_output_int_hex(6, 2, n);
 
-            n += 1;
+        //     n += 1;
 
-            if (n > 'z')
-            {
-                n = 'a';
-            }
-        }
+        //     if (n > 'z')
+        //     {
+        //         n = 'a';
+        //     }
+        // }
 
         BeginDrawing();
         ClearBackground(BLACK);
 
+        //\narrow Up/down: edit\nspace: enter\nshift+space: hold enter
         DrawText("S: step\nH: halt", 10, 10, 9, YELLOW);
 
         SimDraw();
