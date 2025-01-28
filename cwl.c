@@ -12,6 +12,10 @@ cwl_state cwl;
 void cwl_vm_step(); // do one instuction
 void cwl_vm_halt(); // stop the vm
 
+/* cwl edit api */
+void cwl_ed_draw_state();
+
+
 void cwl_init()
 {
     cwl.vm.ip = cwl.vm.sp = 0;
@@ -23,18 +27,52 @@ void cwl_init()
     }
 }
 
-#define MAX_STACK (sizeof(cwl.vm.stack) / sizeof(cwl.vm.stack[0]))
-
 /* input api */
 void cwl_main(ECallWhy call_why)
 {
-    // if (call_why == ECALL_Tick && (cwl.vm.flags & cwl_flag_prog_running))
-    // {
-    //     cwl_vm_step();
-    // }
+    if (cwl.run_state == edit)
+    {
+        cwl_edit(call_why);
+    }
 }
 
-void cwl_set_out(CWL_OUT upo) { out = upo; }
+void cwl_edit(ECallWhy s)
+{
+    if (s == ECALL_Tick)
+    {
+        return;
+    }
+
+    switch (cwl.ed.part)
+    {
+    case opp:
+        break;
+
+    case arg:
+        break;
+
+    case line:
+        break;
+
+    default:
+        break;
+    }
+
+
+    cwl_ed_draw_state();
+}
+
+
+
+
+void cwl_ed_draw_state()
+{
+    
+}
+
+
+
+/* virtual machine parts */
 
 void cwl_vm_push(uint8_t val)
 {
@@ -46,6 +84,17 @@ void cwl_vm_push(uint8_t val)
         LOG("Stack Overflow");
         cwl_vm_halt();
     }
+}
+
+uint8_t cwl_vm_peekn(uint8_t n)
+{
+    if (0 >= cwl.vm.sp - n)
+    {
+        LOG("Stack Underflow");
+        cwl_vm_halt();
+    }
+
+    return cwl.vm.stack[cwl.vm.sp - n];
 }
 
 uint8_t cwl_vm_pop()
@@ -112,8 +161,8 @@ void cwl_vm_step()
         cwl_vm_push(a / b);
         break;
     case Cmp:
-        a = cwl_vm_pop();
-        b = cwl_vm_pop();
+        a = cwl_vm_peekn(0);
+        b = cwl_vm_peekn(1);
 
         cwl.vm.flags.f.cmp_zero = a == b;
         cwl.vm.flags.f.cmp_neg = 0 > (a - b);
@@ -122,11 +171,11 @@ void cwl_vm_step()
         break;
 
     case DisplayChar:
-        out.lcd_output_str(0, (char)c.arg);
+        out.lcd_output_char(0, (char)c.arg);
         break;
 
     case Display:
-        out.lcd_output_int_hex(4, 2, cwl_vm_peek());
+        out.lcd_output_int_hex(2, 2, cwl_vm_peek());
         break;
 
         /* jumps are a little special, they dont set the IP up one IF they jump */
@@ -173,3 +222,5 @@ void cwl_vm_halt()
     cwl.vm.flags.f.prog_running = 0;
     LOG("VM HALTED");
 }
+
+void cwl_set_out(CWL_OUT upo) { out = upo; }

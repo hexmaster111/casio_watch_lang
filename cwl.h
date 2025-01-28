@@ -39,7 +39,7 @@ typedef struct CWL_OUT
     // CALL SAMPLES
     // (0, 2, 'h') => [hx : xx xx]
     // (2, 2, 'o') => [xx : xo xx]
-    void (*lcd_output_str)(uint8_t start, char c);
+    void (*lcd_output_char)(uint8_t start, char c);
 
     // CALL SAMPLES
     // (0, 2, 255) => [FF : xx xx]
@@ -70,13 +70,13 @@ enum cwl_op
     JumpEq,
     JumpGt,
     JumpLe,
+    Halt,
 };
 
 typedef struct cwl_vm_inst
 {
     uint8_t opp, arg;
 } cwl_vm_inst;
-
 
 typedef union UFlags
 {
@@ -92,6 +92,12 @@ typedef union UFlags
 
 typedef struct cwl_state
 {
+    enum run_state
+    {
+        run,
+        edit
+    } run_state;
+
     struct cwl_vm_state
     {
         uint8_t sp, ip;
@@ -99,7 +105,22 @@ typedef struct cwl_state
         uint8_t stack[128];
         cwl_vm_inst code[128];
     } vm;
+
+    struct cwl_edit_state
+    {
+        enum section
+        {
+            opp, // up down effects opp
+            arg, // up down effects arg (if op has one)
+            line // up down effects line var
+        } part;
+        uint8_t line; // what code[line] is being edited right now
+    } ed;
+
 } cwl_state;
+
+#define MAX_STACK (sizeof(cwl.vm.stack) / sizeof(cwl.vm.stack[0]))
+#define MAX_CODE (sizeof(cwl.vm.code) / sizeof(cwl.vm.code[0]))
 
 
 

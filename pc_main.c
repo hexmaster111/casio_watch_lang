@@ -1,5 +1,7 @@
 #include "cwl.h"
 #include <raylib.h>
+#include <math.h>
+
 #define LOGCALL() TraceLog(LOG_INFO, "%s", __func__)
 
 extern cwl_state cwl;
@@ -26,7 +28,10 @@ typedef enum Seg
 
 struct LcdState
 {
-    uint8_t d0, d1, d2, d3, d4, d5, d6;
+    // 0 - 5 : main time display, 0,1 hr 2,3min 4,5 sec
+    // 6 - 7 : day displ,
+
+    uint8_t d[8];
 } lcd_state;
 
 void SetSegment(uint8_t *v, Seg s, int val)
@@ -38,8 +43,44 @@ void SetSegment(uint8_t *v, Seg s, int val)
 }
 
 // a - z ish
-void SetSegLetter(uint8_t *v, char c)
+void SetSegLetter(uint8_t *v, char ch)
 {
+
+    switch (ch)
+    {
+        // clang-format off
+    case 'i': *v = (seg_f | seg_e); break;
+    case 'r': *v = (seg_e | seg_g); break;
+    case 'x': *v = (seg_e | seg_c); break;
+    case 'c': *v = (seg_g | seg_e | seg_d);  break;
+    case 'j': *v = (seg_d | seg_c | seg_a); break;
+    case 'n': *v = (seg_e | seg_g | seg_c); break;
+    case 'u': *v = (seg_e | seg_d | seg_c); break;
+    case 'v': *v = (seg_f | seg_b | seg_d); break;
+    case 'l': *v = (seg_f | seg_e | seg_d); break;
+    case 'f': *v = (seg_a | seg_f | seg_g | seg_e); break;
+    case 'h': *v = (seg_f | seg_e | seg_g | seg_c); break;
+    case 'm': *v = (seg_e | seg_g | seg_c | seg_a); break;
+    case 'o': *v = (seg_e | seg_g | seg_c | seg_d); break;
+    case 's': *v = (seg_a | seg_f | seg_c | seg_d); break;
+    case 't': *v = (seg_f | seg_g | seg_e | seg_d); break;
+    case 'w': *v = (seg_f | seg_b | seg_d | seg_g); break;
+    case 'z': *v = (seg_a | seg_b | seg_e | seg_d); break;
+    case 'b': *v = (seg_f | seg_e | seg_d | seg_c | seg_g);  break;
+    case 'd': *v = (seg_g | seg_e | seg_d | seg_c | seg_b); break;
+    case 'e': *v = (seg_a | seg_f | seg_g | seg_e | seg_d); break;
+    case 'g': *v = (seg_a | seg_f | seg_e | seg_d | seg_c); break;
+    case 'k': *v = (seg_e | seg_c | seg_g | seg_f | seg_a); break;
+    case 'p': *v = (seg_f | seg_a | seg_g | seg_b | seg_e); break;
+    case 'q': *v = (seg_f | seg_g | seg_b | seg_a | seg_c); break;
+    case 'y': *v = (seg_f | seg_g | seg_b | seg_c | seg_d); break;
+    case 'a': *v = (seg_a | seg_f | seg_b | seg_g | seg_e | seg_c);  break;
+        // clang-format on
+
+    default:
+        TraceLog(LOG_INFO, "invalid char:'%c' dec:%d", ch, ch);
+        break;
+    }
 }
 
 // 0 - 9
@@ -119,15 +160,16 @@ void Draw7Seg(float x, float y, float w, float h, uint8_t state)
 
 void SimDraw()
 {
-    const int sz = 10;
 
-    Draw7Seg(100 + (15 * 0), 10, 10, 20, lcd_state.d0);
-    Draw7Seg(100 + (15 * 1), 10, 10, 20, lcd_state.d2);
-    Draw7Seg(100 + (15 * 2), 10, 10, 20, lcd_state.d3);
-    Draw7Seg(100 + (15 * 3), 10, 10, 20, lcd_state.d4);
+    Draw7Seg(75 + (15 * 0), 10 + 50, 10, 20, lcd_state.d[0]);
+    Draw7Seg(75 + (15 * 1), 10 + 50, 10, 20, lcd_state.d[1]);
+    Draw7Seg(75 + (15 * 2), 10 + 50, 10, 20, lcd_state.d[2]);
+    Draw7Seg(75 + (15 * 3), 10 + 50, 10, 20, lcd_state.d[3]);
+    Draw7Seg(75 + (15 * 4), 15 + 50, 10, 15, lcd_state.d[4]);
+    Draw7Seg(75 + (15 * 5), 15 + 50, 10, 15, lcd_state.d[5]);
 
-    Draw7Seg(100 + (15 * 4), 15, 10, 15, lcd_state.d5);
-    Draw7Seg(100 + (15 * 5), 15, 10, 15, lcd_state.d6);
+    Draw7Seg(80 + 0, 45, 5, 10, lcd_state.d[6]);
+    Draw7Seg(80 + 8, 45, 5, 10, lcd_state.d[7]);
 
     DrawText(TextFormat("Run: %d Zero: %d Neg: %d Sp: %d Ip: %d",
                         cwl.vm.flags.f.prog_running,
@@ -135,87 +177,118 @@ void SimDraw()
                         cwl.vm.flags.f.cmp_neg,
                         cwl.vm.sp,
                         cwl.vm.ip),
-             sz, GetScreenHeight() - sz, sz, YELLOW);
+             10, GetScreenHeight() - 10, 10, YELLOW);
 }
 
 /* thease methods are called by the Casio Watch Lang*/
-void Sim_API_lcd_clear() { LOGCALL(); }
-void Sim_API_lcd_output_int(uint8_t start, uint8_t len, uint16_t value) { LOGCALL(); }
-
-void Sim_API_lcd_output_str(uint8_t start, char value)
+void Sim_API_lcd_clear()
 {
-    TraceLog(LOG_INFO, "%s(%d, %c)", __func__, start, value);
+    LOGCALL();
+    lcd_state.d[0] = 0;
+    lcd_state.d[1] = 0;
+    lcd_state.d[2] = 0;
+    lcd_state.d[3] = 0;
+    lcd_state.d[4] = 0;
+    lcd_state.d[5] = 0;
+}
+
+int GetNumberAtPlace(int value, int dig, int rdx)
+{
+    // Calculate the divisor to isolate the desired digit
+    int divisor = pow(rdx, dig);
+    // Isolate the digit and return it
+    return (value / divisor) % rdx;
+}
+
+void Sim_API_lcd_output_int(uint8_t start, uint8_t len, uint16_t value)
+{
+    TraceLog(LOG_INFO, "%s(start: %d, len: %d, value: %d)", __func__, start, len, value);
+
+    uint8_t *s = &lcd_state.d[start + (len - 1)];
+
+    // 1024  len 4 value = 1024
+    //   55  len 4 value = 55
+    // 55    len 2 value = 55
+
+    for (int dig = 0; dig < len; dig++, s -= sizeof(uint8_t))
+    {
+        int atd = GetNumberAtPlace(value, dig, 10);
+        Set7Seg_Number(s, atd);
+    }
+}
+
+void Sim_API_lcd_output_char(uint8_t start, char value)
+{
+    TraceLog(LOG_INFO, "%s(start: %d, value: %c)", __func__, start, value);
+
+    SetSegLetter(&lcd_state.d[start], value);
 }
 
 void Sim_API_lcd_output_int_hex(uint8_t start, uint8_t len, uint16_t value)
 {
-    TraceLog(LOG_INFO, "%s(%d, %d, %d)", __func__, start, len, value);
+    TraceLog(LOG_INFO, "%s(start: %d,len: %d,value: %d)", __func__, start, len, value);
+    uint8_t *s = &lcd_state.d[start + (len - 1)];
+
+    // 1024  len 4 value = 1024
+    //   55  len 4 value = 55
+    // 55    len 2 value = 55
+
+    for (int dig = 0; dig < len; dig++, s -= sizeof(uint8_t))
+    {
+        int atd = GetNumberAtPlace(value, dig, 16);
+        Set7Seg_NumberHex(s, atd);
+    }
 }
 
 /* Driving code for the simulator */
 int main(int argc, char *argv[])
 {
-    lcd_state.d0 = 0;
-
-    // SetSegment(&lcd_state.d0, (seg_a | seg_b | seg_c | seg_d | seg_e | seg_f), 1);
-
     CWL_OUT out = {
         .lcd_clear = Sim_API_lcd_clear,
         .lcd_output_int = Sim_API_lcd_output_int,
-        .lcd_output_str = Sim_API_lcd_output_str,
+        .lcd_output_char = Sim_API_lcd_output_char,
         .lcd_output_int_hex = Sim_API_lcd_output_int_hex,
         .dbg_log = TraceLog};
 
     cwl_set_out(out);
     cwl_init();
 
-    // cwl_debug_loadprog(
-    //     (cwl_vm_inst[128]){
-    //         {Push, 5}, // 5
-    //         {Push, 5}, // 5 5
-    //         {Add},     // 10
-    //         {Display}, // 10
-    //         {Pop},     //
-    //     });
-
     cwl_debug_loadprog(
         (cwl_vm_inst[128]){
-            /*0*/ {Push, 5}, // 5
-            /*1*/ {Push, 4}, // 4 5
-            /*2*/ {Cmp},
-            /*3*/ {JumpEq, 9},
-            /*4*/ {DisplayChar, 'D'},
-            /*5*/ {0xFF},
-            /*6*/ {},
-            /*7*/ {},
-            /*8*/ {},
-            /*9*/ {DisplayChar, 'S'},
-            /*A*/ {0xFF},
-            /*B*/ {},
-            /*C*/ {},
-            /*D*/ {},
+            {Push, 5}, // 5
+            {Push, 5}, // 5 5
+            {Add},     // 10
+            {Display}, // 10
+            {Pop},     //
+            {Halt}     //
         });
-
-    float anm_time = 0;
-    int now = 0;
 
     InitWindow(126 * 2, 80 * 2, "F-91W sim");
     SetTargetFPS(60);
+
+    char n = 'a';
+    float next = 0.5f;
+
     while (!WindowShouldClose())
     {
         SimUpdate();
 
-        if (GetTime() > anm_time)
-        {
-            anm_time = GetTime() + 0.5f;
-            now += 1;
-            if (now > 15)
-                now = 0;
-
-            Set7Seg_NumberHex(&lcd_state.d0, now);
-        }
-
         cwl_main(ECALL_Tick);
+
+        if (GetTime() > next)
+        {
+            next = GetTime() + 0.5f;
+
+            Sim_API_lcd_output_char(0, n);
+            Sim_API_lcd_output_int_hex(6, 2, n);
+
+            n += 1;
+
+            if (n > 'z')
+            {
+                n = 'a';
+            }
+        }
 
         BeginDrawing();
         ClearBackground(BLACK);
